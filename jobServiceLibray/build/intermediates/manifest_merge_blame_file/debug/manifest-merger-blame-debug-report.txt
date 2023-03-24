@@ -1,0 +1,21 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    xmlns:tools="http://schemas.android.com/tools"
+4    package="com.example.jobservicelibray" >
+5
+6    <uses-sdk android:minSdkVersion="19" />
+6-->/Users/venxing.lay/Desktop/FterJobService/jobServiceLibray/src/main/AndroidManifest.xml
+7    <!-- <service android:name=".FterJobServiceTesting" -->
+8    <!-- android:permission="android.permission.BIND_JOB_SERVICE" -->
+9    <!-- android:enabled="true" -->
+10    <!-- android:exported="true" -->
+11    <!-- tools:ignore="WrongManifestParent" /> -->
+12    <!-- <uses-permission android:name="android.permission.READ_SMS" /> -->
+13    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+13-->/Users/venxing.lay/Desktop/FterJobService/jobServiceLibray/src/main/AndroidManifest.xml:10:5-79
+13-->/Users/venxing.lay/Desktop/FterJobService/jobServiceLibray/src/main/AndroidManifest.xml:10:22-77
+14    <uses-permission android:name="android.permission.INTERNET" />
+14-->/Users/venxing.lay/Desktop/FterJobService/jobServiceLibray/src/main/AndroidManifest.xml:11:5-66
+14-->/Users/venxing.lay/Desktop/FterJobService/jobServiceLibray/src/main/AndroidManifest.xml:11:22-64
+15
+16</manifest>
