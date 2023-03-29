@@ -82,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
                 .setPeriodic(15 * 60 * 1000)
                 .build();
 
+
         JobScheduler scheduler = (JobScheduler) ctx.getSystemService(Context.JOB_SCHEDULER_SERVICE);
         int resultCode = scheduler.schedule(info);
         if (resultCode == JobScheduler.RESULT_SUCCESS) {
