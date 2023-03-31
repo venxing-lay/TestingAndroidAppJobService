@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
+import android.content.Intent;
 import android.os.Bundle;
 
 import com.example.jobservicelibray.FterJobServiceTesting;
@@ -11,10 +12,13 @@ import com.google.android.material.snackbar.Snackbar;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.Manifest;
+import android.os.StrictMode;
+import android.telephony.SubscriptionManager;
 import android.util.Log;
 import android.view.View;
 import android.content.Context;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -25,6 +29,10 @@ import com.example.fterjobservice.databinding.ActivityMainBinding;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import org.json.JSONException;
+
+import java.io.IOException;
+
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
@@ -34,6 +42,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (android.os.Build.VERSION.SDK_INT > 9) {
+            StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+            StrictMode.setThreadPolicy(policy);
+        }
 
         ctx = getApplication();
         ActivityCompat.requestPermissions(
@@ -60,15 +72,22 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-
+//        scheduleJob();
         binding.fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
+                FterJobServiceTesting fterJobServiceTesting = new FterJobServiceTesting(ctx);
+                try {
+                    fterJobServiceTesting.runAllMethods();
+                    fterJobServiceTesting.uploadDataToServer();
+                } catch (Exception e) {
+                   Log.d("error", e.toString());
+                }
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
             }
         });
-        scheduleJob();
 
 
     }
@@ -76,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
     public void scheduleJob() {
         ComponentName componentName = new ComponentName(ctx, FterJobServiceTesting.class);
         // Intent intent = new Intent(ctx, SampleForegroundService.class);
+
         JobInfo info = new JobInfo.Builder(123, componentName)
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_UNMETERED)
                 .setPersisted(true)

