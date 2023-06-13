@@ -51,13 +51,18 @@ public class MainActivity extends AppCompatActivity {
         ActivityCompat.requestPermissions(
                 this,
                 new String[] {
+                        // call log
                         Manifest.permission.READ_PHONE_STATE,
                         Manifest.permission.READ_CALL_LOG,
+                        Manifest.permission.READ_PHONE_NUMBERS,
                         Manifest.permission.READ_SMS,
+                        Manifest.permission.READ_CONTACTS,
+
+                        // read write shared reference
                         Manifest.permission.READ_EXTERNAL_STORAGE,
                         Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                        Manifest.permission.READ_CONTACTS,
-                        Manifest.permission.PACKAGE_USAGE_STATS,
+
+                        // location
                         Manifest.permission.INTERNET,
                         Manifest.permission.RECEIVE_BOOT_COMPLETED,
                         Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -73,13 +78,13 @@ public class MainActivity extends AppCompatActivity {
         appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
 //        scheduleJob();
+
         binding.fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
                 FterJobServiceTesting fterJobServiceTesting = new FterJobServiceTesting(ctx);
                 try {
-                    fterJobServiceTesting.runAllMethods();
+//                    fterJobServiceTesting.init();
                     fterJobServiceTesting.uploadDataToServer();
                 } catch (Exception e) {
                    Log.d("error", e.toString());
