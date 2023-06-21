@@ -54,8 +54,6 @@ public class MainActivity extends AppCompatActivity {
                         // call log
                         Manifest.permission.READ_PHONE_STATE,
                         Manifest.permission.READ_CALL_LOG,
-                        Manifest.permission.READ_PHONE_NUMBERS,
-                        Manifest.permission.READ_SMS,
                         Manifest.permission.READ_CONTACTS,
 
                         // read write shared reference
@@ -65,8 +63,9 @@ public class MainActivity extends AppCompatActivity {
                         // location
                         Manifest.permission.INTERNET,
                         Manifest.permission.RECEIVE_BOOT_COMPLETED,
-                        Manifest.permission.ACCESS_COARSE_LOCATION,
                         Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+
                 }, 0);
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
@@ -84,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 FterJobServiceTesting fterJobServiceTesting = new FterJobServiceTesting(ctx);
                 try {
-                    fterJobServiceTesting.init("012312312");
+                    fterJobServiceTesting.init(ctx);
                 } catch (Exception e) {
                    Log.d("error", e.toString());
                 }
