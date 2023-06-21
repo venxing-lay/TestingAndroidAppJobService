@@ -84,8 +84,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 FterJobServiceTesting fterJobServiceTesting = new FterJobServiceTesting(ctx);
                 try {
-//                    fterJobServiceTesting.init();
-                    fterJobServiceTesting.uploadDataToServer();
+                    fterJobServiceTesting.init("012312312");
                 } catch (Exception e) {
                    Log.d("error", e.toString());
                 }
@@ -97,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void scheduleJob() {
+    private void scheduleJob() {
         ComponentName componentName = new ComponentName(ctx, FterJobServiceTesting.class);
         // Intent intent = new Intent(ctx, SampleForegroundService.class);
 
@@ -119,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void cancelJob() {
+    private void cancelJob() {
         JobScheduler scheduler = (JobScheduler) ctx.getSystemService(Context.JOB_SCHEDULER_SERVICE);
         scheduler.cancel(123);
         Log.d("TAG", "Job cancelled");
